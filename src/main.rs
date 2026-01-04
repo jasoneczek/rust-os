@@ -11,43 +11,21 @@ use blog_os::println;
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
-    blog_os::init(); // new
-
-    #[cfg(not(test))]
-    {
-        fn stack_overflow() {
-                stack_overflow(); // for each recursion, the return address is pushed
-        }
-
-        // trigger a stack overflow
-        stack_overflow();
-
-        // trigger a page fault
-        unsafe {
-            *(0xdeadbeef as *mut u8) = 42;
-        };
-
-        // invoke a breakpoint exception
-        x86_64::instructions::interrupts::int3(); // new
-    }
-
-
-    // as before
-    #[cfg(test)]
-    test_main();
+    blog_os::init();
 
     println!("It did not crash!");
-    loop {}
+    blog_os::hlt_loop();
 }
 
-/// This function is called on panic.
+// === Panic handler (non-test) ===
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
-    loop {}
+    blog_os::hlt_loop();
 }
 
+// === Panic handler for test builds ===
 #[cfg(test)]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
