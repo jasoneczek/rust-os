@@ -1,6 +1,9 @@
+pub mod bump;
+pub mod linked_list;
+pub mod fixed_size_block;
+
 extern crate alloc;
 
-use linked_list_allocator::LockedHeap;
 use x86_64::{
     VirtAddr,
     structures::paging::{
@@ -8,6 +11,29 @@ use x86_64::{
         Page, PageTableFlags, Size4KiB,
     },
 };
+use fixed_size_block::FixedSizeBlockAllocator;
+
+/// A wrapper around spin::Mutex to permit trait implementations.
+pub struct Locked<A> {
+    inner: spin::Mutex<A>,
+}
+
+impl<A> Locked<A> {
+    pub const fn new(inner: A) -> Self {
+        Locked {
+            inner: spin::Mutex::new(inner),
+        }
+    }
+
+    pub fn lock(&self) -> spin::MutexGuard<'_, A> {
+        self.inner.lock()
+    }
+}
+
+/// Requires that `align` is a power of two.
+fn align_up(addr: usize, align: usize) -> usize {
+    (addr + align - 1) & !(align - 1)
+}
 
 // === Heap virtual memory layout ===
 pub const HEAP_START: usize = 0x_4444_4444_0000;
@@ -15,7 +41,8 @@ pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
 
 // === Global kernel heap allocator ===
 #[global_allocator]
-static ALLOCATOR: LockedHeap = LockedHeap::empty();
+static ALLOCATOR: Locked<FixedSizeBlockAllocator> = Locked::new(
+    FixedSizeBlockAllocator::new());
 
 // === Map the heap virtual memory region into usable physical frames ===
 pub fn init_heap(
