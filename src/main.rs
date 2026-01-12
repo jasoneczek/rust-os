@@ -10,6 +10,7 @@ extern crate alloc;
 use core::panic::PanicInfo;
 use blog_os::println;
 use bootloader::{BootInfo, entry_point};
+use blog_os::vga_buffer::{set_colors, Color};
 
 use blog_os::memory;
 
@@ -26,6 +27,14 @@ async fn example_task() {
 entry_point!(kernel_main);
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    set_colors(Color::Magenta, Color::Black);
+
+    println!("====================================");
+    println!("        RUST OS — version 0.1.0      ");
+    println!("====================================");
+
+    println!("Booting kernel...\n");
+
     use blog_os::allocator;
     use blog_os::memory::BootInfoFrameAllocator;
     use blog_os::task::keyboard;

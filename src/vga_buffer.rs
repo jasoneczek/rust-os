@@ -141,6 +141,20 @@ impl Writer {
             self.buffer.chars[row][col].write(blank);
         }
     }
+
+    /// Change the writer colors
+    pub fn set_color(&mut self, fg: Color, bg: Color) {
+        self.color_code = ColorCode::new(fg, bg);
+    }
+
+    /// Clear entire VGA buffer
+    pub fn clear_screen(&mut self) {
+        for row in 0..BUFFER_HEIGHT {
+            self.clear_row(row);
+        }
+        self.column_position = 0;
+    }
+
 }
 
 impl fmt::Write for Writer {
@@ -148,6 +162,22 @@ impl fmt::Write for Writer {
         self.write_string(s);
         Ok(())
     }
+}
+
+/// Set text color
+pub fn set_text_color(fg: Color) {
+    use x86_64::instructions::interrupts::without_interrupts;
+    without_interrupts(|| {
+        WRITER.lock().set_color(fg, Color::Black);
+    });
+}
+
+/// Set foreground and background colors
+pub fn set_colors(fg: Color, bg: Color) {
+    use x86_64::instructions::interrupts::without_interrupts;
+    without_interrupts(|| {
+        WRITER.lock().set_color(fg, bg);
+    });
 }
 
 /// Like the `print!` macro in the standard library, but prints to the VGA text buffer.
